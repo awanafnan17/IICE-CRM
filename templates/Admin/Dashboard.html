@@ -195,6 +195,12 @@
 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
               </a>
             </li>
+            <li class="menu-item">
+              <a href="{% url 'PDFNameComparison' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-file-search-line"></i>
+                <div data-i18n="Dashboards">PDF Name Comparison</div>
+              </a>
+            </li>
             {% endif %}
           </ul>
 
@@ -242,17 +248,17 @@
                         <!-- Check if the user has a profile photo, if not, show a default image -->
                         <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                     </div>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                     <li>
-                      <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                      <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                         <div class="d-flex align-items-center">
                           <div class="flex-shrink-0 me-2">
                             <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                           </div>
                           <div class="flex-grow-1">
                             <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -470,6 +476,22 @@
                           <h5 class="card-title mb-1">Email Service</h5>
                           <p class="card-text text-muted">Send notifications</p>
                           <a href="{% url 'EmailService' %}" class="btn btn-secondary">Email Service</a>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- PDF Name Comparison Section -->
+                    <div class="col-md-6 col-lg-3">
+                      <div class="card h-100">
+                        <div class="card-body text-center">
+                          <div class="avatar avatar-md mx-auto mb-3">
+                            <span class="avatar-initial rounded-circle bg-label-dark">
+                              <i class="ri-file-search-line ri-2x"></i>
+                            </span>
+                          </div>
+                          <h5 class="card-title mb-1">PDF Comparison</h5>
+                          <p class="card-text text-muted">Compare PDF names</p>
+                          <a href="{% url 'PDFNameComparison' %}" class="btn btn-dark">Compare Names</a>
                         </div>
                       </div>
                     </div>

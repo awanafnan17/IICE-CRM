@@ -455,6 +455,12 @@
                             <div data-i18n="Dashboards">Email Service</div>
                         </a>
                     </li>
+                    <li class="menu-item">
+                        <a href="{% url 'PDFNameComparison' %}" class="menu-link">
+                            <i class="menu-icon tf-icons ri-file-search-line"></i>
+                            <div data-i18n="Dashboards">PDF Name Comparison</div>
+                        </a>
+                    </li>
                 </ul>
             </aside>
             <!-- / Menu -->
@@ -475,18 +481,18 @@
                                 <a class="nav-link dropdown-toggle hide-arrow p-0" href="" data-bs-toggle="dropdown">
                                     <div class="avatar avatar-online">
                                         <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
-                                             alt="{{ user.first_name }} {{ user.last_name }}" 
-                                             class="w-px-40 h-auto rounded-circle" />
+                         alt="{{ user.first_name }} {{ user.last_name }}" 
+                         class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                                     </div>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                                     <li>
-                                        <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                                        <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                                             <div class="d-flex align-items-center">
                                                 <div class="flex-shrink-0 me-2">
                                                     <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                                                          alt="{{ user.first_name }} {{ user.last_name }}" 
-                                                         class="w-px-40 h-auto rounded-circle" />
+                                                         class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                                                 </div>
                                                 <div class="flex-grow-1">
                                                     <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>

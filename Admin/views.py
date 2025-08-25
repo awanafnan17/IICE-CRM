@@ -7,7 +7,6 @@ from authentication.models import User
 from Admin import models as admin_models
 from .forms import UserForm, SessionForm, StudentForm, LeadForm
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 from reportlab.lib.pagesizes import letter, landscape
@@ -19,14 +18,17 @@ from django.core.mail import send_mail
 from django.db.models import Count
 from decimal import Decimal
 from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 import json
 from docx import Document
 from docx.shared import Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import RGBColor
 from io import BytesIO
 from functools import wraps
+import tempfile
+import subprocess
+import platform
 
 # Role-based access control decorator
 def teacher_redirect_to_attendance(view_func):
@@ -189,7 +191,6 @@ Email: admin@iqrainstitute.com"""
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
 
-@csrf_exempt
 def send_fee_reminder(request):
     if 'user_id' not in request.session:
         return JsonResponse({'status': 'error', 'message': 'Not authenticated'})
@@ -352,8 +353,15 @@ def EmailService(request):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving user: {str(e)}')
+        return redirect('home')
     if request.method == 'POST':
         # Get data from the form
         email_content = request.POST.get('email_content')  # Email body
@@ -392,20 +400,25 @@ def EmailService(request):
     }
     return render(request, 'Admin/EmailService.html', context)
 def print_attendance_report(request, course_id):
-    # Get date range from request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    
-    # Get the course object
-    course = admin_models.Sessions.objects.get(id=course_id)
+    try:
+        # Get date range from request
+        start_date = request.GET.get('start_date')
+        end_date = request.GET.get('end_date')
+        
+        # Get the course object
+        course = admin_models.Sessions.objects.get(id=course_id)
 
-    # Fetch attendance data for this course within the date range
-    attendances = admin_models.Attendance.objects.filter(
-        course=course,
-        date__range=[start_date, end_date]
-    ).order_by('date')
-    
-    students = admin_models.StudentSession.objects.filter(session=course)
+        # Fetch attendance data for this course within the date range
+        attendances = admin_models.Attendance.objects.filter(
+            course=course,
+            date__range=[start_date, end_date]
+        ).order_by('date')
+        
+        students = admin_models.StudentSession.objects.filter(session=course)
+    except admin_models.Sessions.DoesNotExist:
+        return HttpResponse('Course not found', status=404)
+    except Exception as e:
+        return HttpResponse(f'Error retrieving data: {str(e)}', status=500)
 
     # Create a PDF response
     response = HttpResponse(content_type='application/pdf')
@@ -547,20 +560,27 @@ def Payment(request):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
-    
-    # Restrict access for moderators
-    if user.usertype == 2:
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)
+        
+        # Restrict access for moderators
+        if user.usertype == 2:
+            return redirect('Admin_Dashboard')
+        
+        # UNIFIED DATA SOURCE: Use only Payments table and calculated properties
+        payments = admin_models.Payments.objects.select_related(
+            'studentsession__student', 'studentsession__session', 'user'
+        ).all()
+        
+        # Get all active students (single source for student data)
+        students = admin_models.Student.objects.filter(status='Active')
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving payment data: {str(e)}')
         return redirect('Admin_Dashboard')
-    
-    # UNIFIED DATA SOURCE: Use only Payments table and calculated properties
-    payments = admin_models.Payments.objects.select_related(
-        'studentsession__student', 'studentsession__session', 'user'
-    ).all()
-    
-    # Get all active students (single source for student data)
-    students = admin_models.Student.objects.filter(status='Active')
     
     # Initialize metrics
     total_revenue = 0
@@ -804,7 +824,6 @@ def Payment(request):
         'today_date': today,
     }
     return render(request, 'Admin/Payments.html', context)
-@csrf_exempt
 def add_fee_payment(request, session_id):
     if 'user_id' not in request.session:
         return redirect('home')
@@ -847,11 +866,18 @@ def MakeNotification(request):
     if 'user_id' not in request.session:
         return redirect('home')
     
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    
-    # Get all active sessions
-    sessions = admin_models.Sessions.objects.filter(status='Active')
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        
+        # Get all active sessions
+        sessions = admin_models.Sessions.objects.filter(status='Active')
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('home')
     
     for session in sessions:
         # Get all student sessions for this session
@@ -877,11 +903,18 @@ def Notification(request):
     if 'user_id' not in request.session:
         return redirect('home')
     
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    
-    # Get notifications ordered by date/time in descending order (latest first)
-    notifications = admin_models.Notification.objects.all().order_by('-date', '-id')
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        
+        # Get notifications ordered by date/time in descending order (latest first)
+        notifications = admin_models.Notification.objects.all().order_by('-date', '-id')
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving notifications: {str(e)}')
+        return redirect('Admin_Dashboard')
     
     # Get today's date for comparison
     today_date = date.today()
@@ -891,10 +924,12 @@ def Notification(request):
     
     # AUTOMATIC MONTHLY RENEWAL PROCESSING
     # Check for monthly sessions that need renewal within 7 days
+    # Only process active student sessions with active students and active sessions
     monthly_student_sessions = admin_models.StudentSession.objects.filter(
         session__session_type='monthly',
         status='Active',
-        student__status='Active'
+        student__status='Active',
+        session__status='Active'  # Ensure the session itself is also active
     ).select_related('student', 'session')
     
     renewals_created = 0
@@ -953,11 +988,13 @@ def Notification(request):
             print(f"Error processing monthly renewal for {student_session.student.student_name}: {str(e)}")
     
     # Get unpaid payments that are due within 7 days or overdue
+    # Only include payments for active student sessions with active students and active sessions
     due_payments = admin_models.Payments.objects.filter(
         amount=0,  # Unpaid payments
         date__lte=seven_days_from_now,  # Due within 7 days or overdue
         studentsession__student__status='Active',
-        studentsession__session__status='Active'
+        studentsession__session__status='Active',
+        studentsession__status='Active'  # Ensure the student session itself is also active
     ).select_related('studentsession__student', 'studentsession__session')
     
     # Process each payment to create session-like objects for template compatibility
@@ -993,7 +1030,6 @@ def Notification(request):
     }
     return render(request, 'Admin/Notification.html', context)
 
-@csrf_exempt
 def mark_all_notifications_read(request):
     if 'user_id' not in request.session:
         return redirect('home')
@@ -1016,13 +1052,20 @@ def select_course(request):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    
-    # Get all sessions with their student counts using annotation
-    courses = admin_models.Sessions.objects.annotate(
-        student_count=Count('session_students')
-    ).all()
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        
+        # Get all sessions with their student counts using annotation
+        courses = admin_models.Sessions.objects.annotate(
+            student_count=Count('session_students')
+        ).all()
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving courses: {str(e)}')
+        return redirect('Admin_Dashboard')
     
     context = {
         'user': user,
@@ -1033,10 +1076,20 @@ def mark_attendance(request, course_id):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    course = admin_models.Sessions.objects.get(id=course_id)
-    students = admin_models.StudentSession.objects.filter(session=course)
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        course = admin_models.Sessions.objects.get(id=course_id)
+        students = admin_models.StudentSession.objects.filter(session=course)
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Sessions.DoesNotExist:
+        messages.error(request, 'Course not found.')
+        return redirect('select_course')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('select_course')
 
     if request.method == 'POST':
         date1 = request.POST.get('date')
@@ -1093,9 +1146,19 @@ def StudentSessionView(request, studentsessionid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.StudentSession.objects.get(id=studentsessionid)  # The user you are trying to update
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.StudentSession.objects.get(id=studentsessionid)  # The user you are trying to update
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.StudentSession.DoesNotExist:
+        messages.error(request, 'Student session not found.')
+        return redirect('Students')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('Students')
 
     context = {
         'user': user,
@@ -1208,10 +1271,20 @@ def StudentSession(request, studentid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.Student.objects.get(id=studentid)
-    sessions = admin_models.StudentSession.objects.filter(student=userdata)
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.Student.objects.get(id=studentid)
+        sessions = admin_models.StudentSession.objects.filter(student=userdata)
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Student.DoesNotExist:
+        messages.error(request, 'Student not found.')
+        return redirect('Students')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('Students')
 
     context = {
         'user': user,
@@ -1224,9 +1297,19 @@ def LeadView(request, leadid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.Lead.objects.get(id=leadid)  # The user you are trying to update
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.Lead.objects.get(id=leadid)  # The user you are trying to update
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Lead.DoesNotExist:
+        messages.error(request, 'Lead not found.')
+        return redirect('Leads')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('Leads')
 
     context = {
         'user': user,
@@ -1276,9 +1359,16 @@ def AddLead(request):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    active_sessions = admin_models.Sessions.objects.filter(status='Active')  # Fetch active sessions
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        active_sessions = admin_models.Sessions.objects.filter(status='Active')  # Fetch active sessions
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('Admin_Dashboard')
 
     if request.method == 'POST':
         form = LeadForm(request.POST)
@@ -1524,10 +1614,11 @@ def StudentView(request, studentid):
         # Handle freeze/unfreeze actions first
         if 'freeze_student' in request.POST:
             print("Debug: Processing freeze_student action")
+            freeze_reason = request.POST.get('freeze_reason', 'Freeze')  # Default to 'Freeze' if not provided
             userdata.status = 'Inactive'
-            userdata.inactive_reason = 'Freeze'
+            userdata.inactive_reason = freeze_reason
             userdata.save()
-            message = f"Froze {userdata.student_name}"
+            message = f"Student {userdata.student_name} marked as {freeze_reason.lower()}"
             admin_models.Notification.objects.create(user=user, category='Updation', content=message)
             return redirect('ExStudents')
             
@@ -1957,8 +2048,8 @@ def mark_installment_paid(request, studentid):
             # Calculate the installment amount
             installment_amount = request.POST.get('amount')
             if not installment_amount:
-                # Calculate from student's total fee and installment count
-                student_sessions = admin_models.StudentSession.objects.filter(student=student)
+                # Calculate from student's total fee and installment count - only active sessions
+                student_sessions = admin_models.StudentSession.objects.filter(student=student, status='Active')
                 total_fee = sum(session.session.fee or 0 for session in student_sessions)
                 registration_fee = sum(session.session.registration_fee or 0 for session in student_sessions)
                 total_with_reg = total_fee + registration_fee
@@ -1993,8 +2084,8 @@ def mark_installment_paid(request, studentid):
             # Calculate total paid amount - line 1578
             total_paid = sum(payment.amount for payment in all_payments.filter(amount__gt=0))  # Only sum actual payments
             
-            # Calculate remaining amount
-            student_sessions = admin_models.StudentSession.objects.filter(student=student)
+            # Calculate remaining amount - only include active sessions
+            student_sessions = admin_models.StudentSession.objects.filter(student=student, status='Active')
             total_fee = sum(session.session.fee or 0 for session in student_sessions)
             registration_fee = sum(session.session.registration_fee or 0 for session in student_sessions)
             total_with_reg = total_fee + registration_fee
@@ -2031,7 +2122,8 @@ def ExStudents(request):
         return redirect('home')
     user_id = request.session.get('user_id')  # Get the logged-in user ID from the session
     user = User.objects.get(id=user_id)  # Fetch the user object
-    students = admin_models.Student.objects.filter(status="Completed")
+    # Include both Completed students and Inactive students (frozen/expelled)
+    students = admin_models.Student.objects.filter(status__in=["Completed", "Inactive"])
     context = {
         'user': user,
         'students': students,
@@ -2368,7 +2460,8 @@ def CompletedSessions(request):
         return redirect('home')
     user_id = request.session.get('user_id')  # Get the logged-in user ID from the session
     user = User.objects.get(id=user_id)  # Fetch the user object
-    sessions = admin_models.Sessions.objects.filter(status="Completed").annotate(
+    # Include both Completed sessions and Inactive sessions
+    sessions = admin_models.Sessions.objects.filter(status__in=["Completed", "Inactive"]).annotate(
         student_count=Count('session_students')
     )
     context = {
@@ -2704,7 +2797,6 @@ def Admin_Dashboard(request):
         'notification_count': notification_count,
     }
     return render(request, 'Admin/Dashboard.html',context)
-@csrf_exempt
 def filter_payments(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'error': 'Invalid request method'})
@@ -2853,7 +2945,6 @@ def calculate_revenue_metrics(payments, start_date=None, end_date=None):
         'session_performance': session_performance
     }
 
-@csrf_exempt
 def export_word_report(request):
     if request.method != 'POST':
         return HttpResponse('Invalid request method', status=405)
@@ -3035,7 +3126,6 @@ def export_word_report(request):
     except Exception as e:
         return HttpResponse(f'Error generating report: {str(e)}', status=500)
 
-@csrf_exempt
 def get_email_statistics(request):
     """Get real-time email statistics for the Email Services dashboard"""
     if 'user_id' not in request.session:
@@ -3126,7 +3216,6 @@ def get_email_statistics(request):
              'message': f'Error fetching email statistics: {str(e)}'
          })
 
-@csrf_exempt
 def get_email_history(request):
     """Get recent email activity for the Email Services dashboard"""
     if 'user_id' not in request.session:
@@ -3214,3 +3303,569 @@ def get_email_history(request):
             'status': 'error',
             'message': f'Error fetching email history: {str(e)}'
         })
+
+@teacher_redirect_to_attendance
+def PDFNameComparison(request):
+    """PDF Name Comparison page - compares names from uploaded PDF with selected session students"""
+    if 'user_id' not in request.session:
+        return redirect('home')
+
+    user_id = request.session.get('user_id')
+    user = User.objects.get(id=user_id)
+    
+    # Get all current and completed sessions for selection
+    current_sessions = admin_models.Sessions.objects.filter(status='Active').annotate(
+        student_count=Count('session_students')
+    )
+    completed_sessions = admin_models.Sessions.objects.filter(status='Completed').annotate(
+        student_count=Count('session_students')
+    )
+    
+    context = {
+        'user': user,
+        'current_sessions': current_sessions,
+        'completed_sessions': completed_sessions,
+    }
+    
+    if request.method == 'POST':
+        try:
+            # Handle PDF upload and session selection
+            pdf_file = request.FILES.get('pdf_file')
+            selected_sessions_raw = request.POST.get('selected_sessions')
+            
+            if not pdf_file:
+                return JsonResponse({'success': False, 'error': 'Please upload a PDF file.'})
+            
+            if not selected_sessions_raw:
+                return JsonResponse({'success': False, 'error': 'Please select at least one session.'})
+            
+            # Parse JSON string to get session IDs
+            import json
+            try:
+                selected_sessions = json.loads(selected_sessions_raw)
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'Invalid session data format.'})
+            
+            # Extract text from PDF
+            import PyPDF2
+            import io
+            import re
+            
+            pdf_text = ""
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_file.read()))
+            
+            for page in pdf_reader.pages:
+                pdf_text += page.extract_text() + "\n"
+            
+            # Convert PDF text to lowercase for case-insensitive comparison
+            pdf_text_lower = pdf_text.lower()
+            
+            # Extract all potential text segments that could contain names
+            # Split by common delimiters and clean up
+            import string
+            # Remove punctuation except spaces and common name characters
+            translator = str.maketrans('', '', string.punctuation.replace('-', '').replace("'", ''))
+            cleaned_text = pdf_text.translate(translator)
+            
+            # Split into words and lines for comprehensive searching
+            pdf_words = cleaned_text.lower().split()
+            pdf_lines = [line.strip() for line in cleaned_text.lower().split('\n') if line.strip()]
+            
+            # Get students from selected sessions
+            session_students = []
+            for session_id in selected_sessions:
+                # Convert session_id to integer to handle form data
+                session_id = int(session_id)
+                session = admin_models.Sessions.objects.get(id=session_id)
+                students = admin_models.StudentSession.objects.filter(
+                    session=session
+                ).select_related('student', 'session')
+                
+                for student_session in students:
+                    session_students.append({
+                        'student_name': student_session.student.student_name,
+                        'rollno': student_session.student.rollno,
+                        'father_name': student_session.student.father_name,
+                        'mobile_no': student_session.student.mobile_no,
+                        'email': student_session.student.email,
+                        'cnic': student_session.student.cnic,
+                        'session_name': student_session.session.session_name,
+                        'session_type': student_session.session.get_session_type_display(),
+                        'start_date': student_session.session.start_date.strftime('%Y-%m-%d') if student_session.session.start_date else 'N/A',
+                        'end_date': student_session.session.end_date.strftime('%Y-%m-%d') if student_session.session.end_date else 'N/A',
+                        'registration_date': student_session.registration_date.strftime('%Y-%m-%d') if student_session.registration_date else 'N/A',
+                        'fee': student_session.fee,
+                        'status': student_session.status
+                    })
+            
+            # Compare student names from database with PDF content (case-insensitive)
+            matched_names = []
+            unmatched_students = []
+            matched_student_ids = set()  # Track matched students to avoid duplicates
+            
+            def normalize_name(name):
+                """Normalize name for comparison by removing extra spaces and converting to lowercase"""
+                return ' '.join(name.lower().split())
+            
+            def student_name_in_pdf(student_name, pdf_text_lower, pdf_words, pdf_lines):
+                """Check if student name appears anywhere in the PDF content (case-insensitive)"""
+                if not student_name:
+                    return False
+                    
+                student_norm = normalize_name(student_name)
+                student_words = student_norm.split()
+                
+                # Strategy 1: Check if full name appears in PDF text
+                if student_norm in pdf_text_lower:
+                    return True
+                
+                # Strategy 2: Check if all words of student name appear in PDF words
+                if all(word in pdf_words for word in student_words):
+                    return True
+                
+                # Strategy 3: Check if student name appears in any PDF line
+                for line in pdf_lines:
+                    if student_norm in line:
+                        return True
+                    # Also check if all student name words appear in the same line
+                    if all(word in line for word in student_words):
+                        return True
+                
+                # Strategy 4: Check partial matches (at least 2 words for names with 3+ words)
+                if len(student_words) >= 3:
+                    for line in pdf_lines:
+                        matches = sum(1 for word in student_words if word in line)
+                        if matches >= 2:  # At least 2 words match
+                            return True
+                
+                return False
+            
+            # Check each student name against PDF content
+            for student in session_students:
+                if student['student_name'] and student['rollno'] not in matched_student_ids:
+                    if student_name_in_pdf(student['student_name'], pdf_text_lower, pdf_words, pdf_lines):
+                        matched_names.append(student)  # Store complete student object
+                        matched_student_ids.add(student['rollno'])
+                    else:
+                        unmatched_students.append(student)  # Store complete student object
+            
+            # Return JSON response for AJAX
+            return JsonResponse({
+                'success': True,
+                'results': {
+                    'matched': matched_names,
+                    'pdf_only': [],  # No longer extracting specific PDF names
+                    'students_only': unmatched_students
+                },
+                'stats': {
+                    'pdf_names_count': 0,  # No longer counting extracted PDF names
+                    'session_students_count': len(session_students),
+                    'matched_count': len(matched_names),
+                    'pdf_only_count': 0,  # No longer relevant
+                    'students_only_count': len(unmatched_students)
+                }
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error processing PDF: {str(e)}'})
+    
+    return render(request, 'Admin/PDFNameComparison.html', context)
+
+
+@teacher_redirect_to_attendance
+def export_pdf_comparison_results(request):
+    """Export PDF comparison results to Word or PDF document"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            export_format = data.get('format', 'word')  # 'word', 'pdf', or 'word_to_pdf'
+            results = data.get('results', {})
+            
+            if export_format == 'word':
+                return generate_word_document(results)
+            elif export_format == 'word_to_pdf':
+                return generate_word_to_pdf_document(results)
+            else:
+                return generate_pdf_document(results)
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Export failed: {str(e)}'})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+def generate_word_document(results):
+    """Generate Word document with comparison results"""
+    # Create a new Document
+    doc = Document()
+    
+    # Add title
+    title = doc.add_heading('PDF Name Comparison Results', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add timestamp
+    doc.add_paragraph(f'Generated on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}').alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph('')  # Empty line
+    
+    # Summary section
+    doc.add_heading('Summary', level=1)
+    summary_table = doc.add_table(rows=3, cols=2)
+    summary_table.style = 'Table Grid'
+    
+    matched_count = len(results.get('matched', []))
+    unmatched_count = len(results.get('students_only', []))
+    
+    summary_data = [
+        ['Students Found in PDF', str(matched_count)],
+        ['Students Not Found in PDF', str(unmatched_count)],
+        ['Total Students Processed', str(matched_count + unmatched_count)]
+    ]
+    
+    for i, (label, value) in enumerate(summary_data):
+        summary_table.cell(i, 0).text = label
+        summary_table.cell(i, 1).text = value
+        # Make header cells bold
+        summary_table.cell(i, 0).paragraphs[0].runs[0].bold = True
+    
+    doc.add_paragraph('')  # Empty line
+    
+    # Students Found in PDF section
+    if results.get('matched'):
+        doc.add_heading(f'Students Found in PDF ({len(results["matched"])})', level=1)
+        matched_table = doc.add_table(rows=1, cols=8)
+        matched_table.style = 'Table Grid'
+        
+        # Header row
+        header_cells = matched_table.rows[0].cells
+        headers = ['Student Name', 'Roll No', 'Father Name', 'Mobile No', 'Email', 'Session', 'Session Period', 'Registration Date']
+        for i, header in enumerate(headers):
+            header_cells[i].text = header
+            header_cells[i].paragraphs[0].runs[0].bold = True
+        
+        for student in results['matched']:
+            row_cells = matched_table.add_row().cells
+            row_cells[0].text = student.get('student_name', 'N/A')
+            row_cells[1].text = student.get('rollno', 'N/A')
+            row_cells[2].text = student.get('father_name', 'N/A')
+            row_cells[3].text = student.get('mobile_no', 'N/A')
+            row_cells[4].text = student.get('email', 'N/A')
+            row_cells[5].text = f"{student.get('session_name', 'N/A')} ({student.get('session_type', 'N/A')})"
+            row_cells[6].text = f"{student.get('start_date', 'N/A')} to {student.get('end_date', 'N/A')}"
+            row_cells[7].text = student.get('registration_date', 'N/A')
+    
+    # Students Not Found in PDF section
+    if results.get('students_only'):
+        doc.add_paragraph('')  # Empty line
+        doc.add_heading(f'Students Not Found in PDF ({len(results["students_only"])})', level=1)
+        students_only_table = doc.add_table(rows=1, cols=8)
+        students_only_table.style = 'Table Grid'
+        
+        # Header row
+        header_cells = students_only_table.rows[0].cells
+        headers = ['Student Name', 'Roll No', 'Father Name', 'Mobile No', 'Email', 'Session', 'Session Period', 'Registration Date']
+        for i, header in enumerate(headers):
+            header_cells[i].text = header
+            header_cells[i].paragraphs[0].runs[0].bold = True
+        
+        for student in results['students_only']:
+            row_cells = students_only_table.add_row().cells
+            row_cells[0].text = student.get('student_name', 'N/A')
+            row_cells[1].text = student.get('rollno', 'N/A')
+            row_cells[2].text = student.get('father_name', 'N/A')
+            row_cells[3].text = student.get('mobile_no', 'N/A')
+            row_cells[4].text = student.get('email', 'N/A')
+            row_cells[5].text = f"{student.get('session_name', 'N/A')} ({student.get('session_type', 'N/A')})"
+            row_cells[6].text = f"{student.get('start_date', 'N/A')} to {student.get('end_date', 'N/A')}"
+            row_cells[7].text = student.get('registration_date', 'N/A')
+    
+    # Save document to BytesIO
+    doc_io = BytesIO()
+    doc.save(doc_io)
+    doc_io.seek(0)
+    
+    # Create HTTP response
+    response = HttpResponse(
+        doc_io.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = f'attachment; filename="PDF_Comparison_Results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx"'
+    
+    return response
+
+
+def generate_word_to_pdf_document(results):
+    """Generate Word document with comparison results (excluding unmatched students) and convert to PDF"""
+    # Create a new Document
+    doc = Document()
+    
+    # Add title
+    title = doc.add_heading('PDF Name Comparison Results', 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    # Add timestamp
+    doc.add_paragraph(f'Generated on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}').alignment = WD_ALIGN_PARAGRAPH.CENTER
+    doc.add_paragraph('')  # Empty line
+    
+    # Summary section (only showing matched students)
+    doc.add_heading('Summary', level=1)
+    summary_table = doc.add_table(rows=2, cols=2)
+    summary_table.style = 'Table Grid'
+    
+    matched_count = len(results.get('matched', []))
+    
+    summary_data = [
+        ['Students Found in PDF', str(matched_count)],
+        ['Total Students Processed', str(matched_count)]
+    ]
+    
+    for i, (label, value) in enumerate(summary_data):
+        summary_table.cell(i, 0).text = label
+        summary_table.cell(i, 1).text = value
+        # Make header cells bold
+        summary_table.cell(i, 0).paragraphs[0].runs[0].bold = True
+    
+    doc.add_paragraph('')  # Empty line
+    
+    # Students Found in PDF section (only section included)
+    if results.get('matched'):
+        doc.add_heading(f'Students Found in PDF ({len(results["matched"])})', level=1)
+        matched_table = doc.add_table(rows=1, cols=8)
+        matched_table.style = 'Table Grid'
+        
+        # Header row with highlighted Student Name column
+        header_cells = matched_table.rows[0].cells
+        headers = ['Student Name', 'Roll No', 'Father Name', 'Mobile No', 'Email', 'Session', 'Session Period', 'Registration Date']
+        for i, header in enumerate(headers):
+            header_cells[i].text = header
+            header_cells[i].paragraphs[0].runs[0].bold = True
+            # Highlight Student Name column header
+            if i == 0:
+                # Set background color for Student Name column
+                from docx.oxml.shared import qn
+                from docx.oxml import parse_xml
+                shading_elm = parse_xml(r'<w:shd {} w:fill="FFFF00"/>'.format(qn('w:shd')))
+                header_cells[i]._tc.get_or_add_tcPr().append(shading_elm)
+        
+        for student in results['matched']:
+            row_cells = matched_table.add_row().cells
+            row_cells[0].text = student.get('student_name', 'N/A')
+            row_cells[1].text = student.get('rollno', 'N/A')
+            row_cells[2].text = student.get('father_name', 'N/A')
+            row_cells[3].text = student.get('mobile_no', 'N/A')
+            row_cells[4].text = student.get('email', 'N/A')
+            row_cells[5].text = f"{student.get('session_name', 'N/A')} ({student.get('session_type', 'N/A')})"
+            row_cells[6].text = f"{student.get('start_date', 'N/A')} to {student.get('end_date', 'N/A')}"
+            row_cells[7].text = student.get('registration_date', 'N/A')
+            
+            # Highlight Student Name column data
+            shading_elm = parse_xml(r'<w:shd {} w:fill="FFFF99"/>'.format(qn('w:shd')))
+            row_cells[0]._tc.get_or_add_tcPr().append(shading_elm)
+    
+    # Add note about comparison
+    doc.add_paragraph('')
+    note_para = doc.add_paragraph()
+    note_para.add_run('Note: ').bold = True
+    note_para.add_run('The highlighted "Student Name" column indicates the field used for PDF comparison. Only students found in the PDF are included in this report.')
+    
+    # Save Word document to temporary file
+    with tempfile.NamedTemporaryFile(suffix='.docx', delete=False) as temp_docx:
+        doc.save(temp_docx.name)
+        temp_docx_path = temp_docx.name
+    
+    try:
+        # Convert Word to PDF using LibreOffice (if available)
+        temp_pdf_path = temp_docx_path.replace('.docx', '.pdf')
+        
+        # Try LibreOffice conversion
+        try:
+            if platform.system() == 'Windows':
+                # Try common LibreOffice paths on Windows
+                libreoffice_paths = [
+                    r'C:\Program Files\LibreOffice\program\soffice.exe',
+                    r'C:\Program Files (x86)\LibreOffice\program\soffice.exe'
+                ]
+                soffice_path = None
+                for path in libreoffice_paths:
+                    if os.path.exists(path):
+                        soffice_path = path
+                        break
+                
+                if soffice_path:
+                    subprocess.run([
+                        soffice_path,
+                        '--headless',
+                        '--convert-to', 'pdf',
+                        '--outdir', os.path.dirname(temp_pdf_path),
+                        temp_docx_path
+                    ], check=True, timeout=30)
+                else:
+                    raise FileNotFoundError('LibreOffice not found')
+            else:
+                # Linux/Mac
+                subprocess.run([
+                    'libreoffice',
+                    '--headless',
+                    '--convert-to', 'pdf',
+                    '--outdir', os.path.dirname(temp_pdf_path),
+                    temp_docx_path
+                ], check=True, timeout=30)
+            
+            # Read the converted PDF
+            with open(temp_pdf_path, 'rb') as pdf_file:
+                pdf_content = pdf_file.read()
+            
+            # Clean up temporary files
+            os.unlink(temp_docx_path)
+            os.unlink(temp_pdf_path)
+            
+            # Create HTTP response
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="PDF_Comparison_Results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+            
+            return response
+            
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+            # Fallback: return Word document if PDF conversion fails
+            os.unlink(temp_docx_path)
+            
+            # Recreate the Word document in memory
+            doc_io = BytesIO()
+            doc.save(doc_io)
+            doc_io.seek(0)
+            
+            response = HttpResponse(
+                doc_io.getvalue(),
+                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            )
+            response['Content-Disposition'] = f'attachment; filename="PDF_Comparison_Results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.docx"'
+            
+            return response
+            
+    except Exception as e:
+        # Clean up and return error
+        if os.path.exists(temp_docx_path):
+            os.unlink(temp_docx_path)
+        raise e
+
+
+def generate_pdf_document(results):
+    """Generate PDF document with comparison results"""
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="PDF_Comparison_Results_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf"'
+    
+    # Create PDF
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+    
+    def draw_header():
+        """Draw header on each page"""
+        p.setFont("Helvetica-Bold", 16)
+        p.drawCentredText(width/2, height-40, "PDF Name Comparison Results")
+        p.setFont("Helvetica", 10)
+        p.drawCentredText(width/2, height-55, f'Generated on: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        return height - 80
+    
+    def check_page_break(y_pos, needed_space=60):
+        """Check if we need a new page"""
+        if y_pos < needed_space:
+            p.showPage()
+            return draw_header()
+        return y_pos
+    
+    y_position = draw_header()
+    
+    # Summary section
+    y_position = check_page_break(y_position, 100)
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, y_position, "Summary")
+    y_position -= 25
+    
+    p.setFont("Helvetica", 11)
+    matched_count = len(results.get('matched', []))
+    unmatched_count = len(results.get('students_only', []))
+    
+    summary_data = [
+        f"✓ Students Found in PDF: {matched_count}",
+        f"✗ Students Not Found in PDF: {unmatched_count}",
+        f"📊 Total Students Processed: {matched_count + unmatched_count}"
+    ]
+    
+    for item in summary_data:
+        p.drawString(70, y_position, item)
+        y_position -= 18
+    
+    y_position -= 20
+    
+    # Matched Students section
+    if results.get('matched'):
+        y_position = check_page_break(y_position, 100)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, f"Students Found in PDF ({len(results['matched'])})")
+        y_position -= 25
+        
+        for i, student in enumerate(results['matched']):
+            y_position = check_page_break(y_position, 80)
+            
+            # Student header
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(70, y_position, f"{i+1}. {student.get('student_name', 'N/A')} ({student.get('rollno', 'N/A')})")
+            y_position -= 15
+            
+            # Student details
+            p.setFont("Helvetica", 9)
+            details = [
+                f"Father: {student.get('father_name', 'N/A')}",
+                f"Mobile: {student.get('mobile_no', 'N/A')}",
+                f"Email: {student.get('email', 'N/A')}",
+                f"Session: {student.get('session_name', 'N/A')} ({student.get('session_type', 'N/A')})",
+                f"Period: {student.get('start_date', 'N/A')} to {student.get('end_date', 'N/A')}",
+                f"Registration: {student.get('registration_date', 'N/A')}"
+            ]
+            
+            for detail in details:
+                p.drawString(90, y_position, detail)
+                y_position -= 12
+            
+            y_position -= 8  # Extra space between students
+    
+    # Students Not in PDF section
+    if results.get('students_only'):
+        y_position = check_page_break(y_position, 100)
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(50, y_position, f"Students Not Found in PDF ({len(results['students_only'])})")
+        y_position -= 25
+        
+        for i, student in enumerate(results['students_only']):
+            y_position = check_page_break(y_position, 80)
+            
+            # Student header
+            p.setFont("Helvetica-Bold", 11)
+            p.drawString(70, y_position, f"{i+1}. {student.get('student_name', 'N/A')} ({student.get('rollno', 'N/A')})")
+            y_position -= 15
+            
+            # Student details
+            p.setFont("Helvetica", 9)
+            details = [
+                f"Father: {student.get('father_name', 'N/A')}",
+                f"Mobile: {student.get('mobile_no', 'N/A')}",
+                f"Email: {student.get('email', 'N/A')}",
+                f"Session: {student.get('session_name', 'N/A')} ({student.get('session_type', 'N/A')})",
+                f"Period: {student.get('start_date', 'N/A')} to {student.get('end_date', 'N/A')}",
+                f"Registration: {student.get('registration_date', 'N/A')}"
+            ]
+            
+            for detail in details:
+                p.drawString(90, y_position, detail)
+                y_position -= 12
+            
+            y_position -= 8  # Extra space between students
+    
+    p.save()
+    
+    # Get PDF content
+    pdf_content = buffer.getvalue()
+    buffer.close()
+    
+    response.write(pdf_content)
+    return response

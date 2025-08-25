@@ -12,9 +12,16 @@ from datetime import date
 def MakeNotification(request):
     if 'user_id' not in request.session:
         return redirect('home')
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    sessions = admin_models.StudentSession.objects.all()
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        sessions = admin_models.StudentSession.objects.all()
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('home')
     for session in sessions:
         if session.due_date < date.today():
             message = "Due Date passed for " + session.student.student_name + " in " + session.session.session_name + " session"
@@ -30,9 +37,16 @@ def MakeNotification(request):
 def Notification(request):
     if 'user_id' not in request.session:
         return redirect('home')
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    notifications = admin_models.Notification.objects.filter(category="Late fee").order_by('-date')
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        notifications = admin_models.Notification.objects.filter(category="Late fee").order_by('-date')
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving notifications: {str(e)}')
+        return redirect('home')
     context = {
         'user': user,
         'notifications': notifications
@@ -64,9 +78,19 @@ def StudentSessionView(request, studentsessionid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.StudentSession.objects.get(id=studentsessionid)  # The user you are trying to update
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.StudentSession.objects.get(id=studentsessionid)  # The user you are trying to update
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.StudentSession.DoesNotExist:
+        messages.error(request, 'Student session not found.')
+        return redirect('mod_Students')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('mod_Students')
 
     context = {
         'user': user,
@@ -85,11 +109,21 @@ def StudentSessionView(request, studentsessionid):
 def AddStudentSession(request, studentid):
     if 'user_id' not in request.session:
         return redirect('home')
-    # Get the student object
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)
-    student =  admin_models.Student.objects.get(id=studentid)
-    active_sessions = admin_models.Sessions.objects.filter(status='Active')  # Fetch active sessions
+    try:
+        # Get the student object
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)
+        student =  admin_models.Student.objects.get(id=studentid)
+        active_sessions = admin_models.Sessions.objects.filter(status='Active')  # Fetch active sessions
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Student.DoesNotExist:
+        messages.error(request, 'Student not found.')
+        return redirect('mod_Students')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('mod_Students')
 
     if request.method == 'POST':
         # Get form data
@@ -135,10 +169,20 @@ def StudentSession(request, studentid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.Student.objects.get(id=studentid)
-    sessions = admin_models.StudentSession.objects.filter(student=userdata)
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.Student.objects.get(id=studentid)
+        sessions = admin_models.StudentSession.objects.filter(student=userdata)
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Student.DoesNotExist:
+        messages.error(request, 'Student not found.')
+        return redirect('mod_Students')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('mod_Students')
 
     context = {
         'user': user,
@@ -151,9 +195,19 @@ def LeadView(request, leadid):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    userdata = admin_models.Lead.objects.get(id=leadid)  # The user you are trying to update
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        userdata = admin_models.Lead.objects.get(id=leadid)  # The user you are trying to update
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Lead.DoesNotExist:
+        messages.error(request, 'Lead not found.')
+        return redirect('mod_Leads')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('mod_Leads')
 
     context = {
         'user': user,

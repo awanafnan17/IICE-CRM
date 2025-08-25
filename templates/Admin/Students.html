@@ -161,6 +161,12 @@
 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
               </a>
             </li>
+            <li class="menu-item">
+              <a href="{% url 'PDFNameComparison' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-file-search-line"></i>
+                <div data-i18n="Dashboards">PDF Name Comparison</div>
+              </a>
+            </li>
           </ul>
 
         </aside>
@@ -194,17 +200,17 @@
                         <!-- Check if the user has a profile photo, if not, show a default image -->
                         <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                     </div>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                     <li>
-                      <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                      <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                         <div class="d-flex align-items-center">
                           <div class="flex-shrink-0 me-2">
                             <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                           </div>
                           <div class="flex-grow-1">
                             <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -266,7 +272,7 @@
                                         <td>
                                             <a href="{% url 'StudentView' student.id %}" class="d-flex align-items-center" style="text-decoration: none; color: inherit;">
                                                 <div class="avatar avatar-sm me-4">
-                                                    <img src="{{ student.profile_photo.url }}" alt="Avatar" class="rounded-circle" />
+                                                    <img src="{% if student.profile_photo %}{{ student.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" alt="Avatar" class="rounded-circle" />
                                                 </div>
                                                 <div>
                                                     <h6 class="mb-0 text-truncate">{{ student.student_name }}</h6>
@@ -726,11 +732,13 @@
                                 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
                                 </a>
                                     <ul class="menu-sub open">
+                                    {% if user.usertype != 2 %}
                                     <li class="menu-item">
                                     <a href="{% url 'Faculty' %}" class="menu-link">
                                     <div data-i18n="CRM">Faculty</div>
                                     </a>
                                     </li>
+                                    {% endif %}
                                     <li class="menu-item active">
                                     <a href="{% url 'Students' %}" class="menu-link">
                                     <div data-i18n="CRM">Students</div>
@@ -777,6 +785,7 @@
                                 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
                                 </a>
                             </li>
+                            {% if user.usertype != 2 %}
                             <li class="menu-item">
                                 <a href="{% url 'payment' %}" class="menu-link">
                                     <i class="menu-icon tf-icons ri-wallet-2-fill"></i>
@@ -784,6 +793,7 @@
                                 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
                                 </a>
                             </li>
+                            {% endif %}
                             <li class="menu-item">
                                 <a href="{% url 'notification' %}" class="menu-link">
                                     <i class="menu-icon tf-icons ri-mail-fill"></i>
@@ -826,18 +836,18 @@
                                           <div class="avatar avatar-online">
                                               <!-- Check if the user has a profile photo, if not, show a default image -->
                                               <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
-                                                   alt="{{ user.first_name }} {{ user.last_name }}" 
-                                                   class="w-px-40 h-auto rounded-circle" />
+                                                         alt="{{ user.first_name }} {{ user.last_name }}" 
+                                                         class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                                           </div>
                                         </a>
                                         <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                                             <li>
-                                                <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                                                <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                                                     <div class="d-flex align-items-center">
                                                         <div class="flex-shrink-0 me-2">
                                                             <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                                                                  alt="{{ user.first_name }} {{ user.last_name }}" 
-                                                                 class="w-px-40 h-auto rounded-circle" />
+                                                                 class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                                                         </div>
                                                         <div class="flex-grow-1">
                                                             <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -904,7 +914,7 @@
                                                             <td>
                                                                 <a href="{% url 'StudentView' student.id %}" class="student-link">
                                                                     <div class="avatar avatar-sm me-3">
-                                                                        <img src="{{ student.profile_photo.url }}" alt="Avatar" class="rounded-circle" />
+                                                                        <img src="{% if student.profile_photo %}{{ student.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" alt="Avatar" class="rounded-circle" />
                                                                     </div>
                                                                     <div>
                                                                         <h6 class="mb-0 student-name">{{ student.student_name }}</h6>

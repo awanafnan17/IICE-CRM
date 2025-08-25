@@ -83,13 +83,6 @@
               {# <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
             </a>
             <ul class="menu-sub open">
-              {% if user.usertype != 2 %}
-              <li class="menu-item">
-                <a href="{% url 'Faculty' %}" class="menu-link">
-                  <div data-i18n="CRM">Faculty</div>
-                </a>
-              </li>
-              {% endif %}
               <li class="menu-item">
                 <a href="{% url 'Students' %}" class="menu-link">
                   <div data-i18n="CRM">Students</div>
@@ -187,19 +180,17 @@
                 <a class="nav-link dropdown-toggle hide-arrow p-0" href="" data-bs-toggle="dropdown">
                   <div class="avatar avatar-online">
                     <!-- Check if the user has a profile photo, if not, show a default image -->
-                    <img
-                      src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}"
-                      alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-auto rounded-circle" />
+                    <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                             alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                   </div>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                   <li>
-                    <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                    <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                       <div class="d-flex align-items-center">
                         <div class="flex-shrink-0 me-2">
-                          <img
-                            src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}"
-                            alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-auto rounded-circle" />
+                          <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                             alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                         </div>
                         <div class="flex-grow-1">
                           <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -765,11 +756,6 @@
             </a>
             <ul class="menu-sub open">
               <li class="menu-item">
-                <a href="{% url 'Faculty' %}" class="menu-link">
-                  <div data-i18n="CRM">Faculty</div>
-                </a>
-              </li>
-              <li class="menu-item">
                 <a href="{% url 'Students' %}" class="menu-link">
                   <div data-i18n="CRM">Students</div>
                 </a>
@@ -815,6 +801,7 @@
               {# <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
             </a>
           </li>
+          {% if user.usertype != 2 %}
           <li class="menu-item">
             <a href="{% url 'payment' %}" class="menu-link">
               <i class="menu-icon tf-icons ri-wallet-2-fill"></i>
@@ -822,6 +809,7 @@
               {# <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
             </a>
           </li>
+          {% endif %}
           <li class="menu-item">
             <a href="{% url 'notification' %}" class="menu-link">
               <i class="menu-icon tf-icons ri-mail-fill"></i>
@@ -862,9 +850,8 @@
                 <a class="nav-link dropdown-toggle hide-arrow p-0" href="" data-bs-toggle="dropdown">
                   <div class="avatar avatar-online">
                     <!-- Check if the user has a profile photo, if not, show a default image -->
-                    <img
-                      src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}"
-                      alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-auto rounded-circle" />
+                    <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                                                         alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                   </div>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
@@ -872,9 +859,8 @@
                     <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
                       <div class="d-flex align-items-center">
                         <div class="flex-shrink-0 me-2">
-                          <img
-                            src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}"
-                            alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-auto rounded-circle" />
+                          <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                                                         alt="{{ user.first_name }} {{ user.last_name }}" class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                         </div>
                         <div class="flex-grow-1">
                           <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -932,6 +918,7 @@
                           <th class="text-truncate">Student</th>
                           <th class="text-truncate">Email</th>
                           <th class="text-truncate">Phone</th>
+                          <th class="text-truncate">Reason</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -960,6 +947,21 @@
                           <td class="text-truncate">
                             <i class="ri-phone-line me-2 text-success"></i>
                             {{ student.mobile_no }}
+                          </td>
+                          <td class="text-truncate">
+                            {% if student.inactive_reason %}
+                              {% if student.inactive_reason == 'Freeze' %}
+                                <span class="badge bg-warning"><i class="ri-pause-circle-line me-1"></i>{{ student.inactive_reason }}</span>
+                              {% elif student.inactive_reason == 'Left' %}
+                                <span class="badge bg-info"><i class="ri-logout-box-line me-1"></i>{{ student.inactive_reason }}</span>
+                              {% elif student.inactive_reason == 'Expelled' %}
+                                <span class="badge bg-danger"><i class="ri-close-circle-line me-1"></i>{{ student.inactive_reason }}</span>
+                              {% else %}
+                                <span class="badge bg-secondary">{{ student.inactive_reason }}</span>
+                              {% endif %}
+                            {% else %}
+                              <span class="badge bg-light text-muted">-</span>
+                            {% endif %}
                           </td>
                         </tr>
                         {% endfor %}

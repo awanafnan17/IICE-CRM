@@ -56,3 +56,48 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+*.temp
+
+# Database backups
+*.sql
+*.json.backup
+database_backup.json
+iice_complete_backup.sql
+
+# Debug and test files
+debug_*.py
+test_*.py
+final_discrepancy_analysis.py
+fix_*.py
+
+# Logs and runtime files
+*.log
+*.out
+*.err
+runtime.txt
+
+# Cache directories
+.cache/
+.pytest_cache/
+__pycache__/
+
+# Temporary HTML files
+*.html.backup
+*_corrupted.html
+
+# Node modules (if any)
+node_modules/
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Documentation build
+docs/_build/

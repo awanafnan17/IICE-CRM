@@ -10,9 +10,16 @@ def select_course(request):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    courses = admin_models.Sessions.objects.all()
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        courses = admin_models.Sessions.objects.all()
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('home')
     context = {
         'user': user,
         'courses': courses
@@ -22,10 +29,20 @@ def mark_attendance(request, course_id):
     if 'user_id' not in request.session:
         return redirect('home')
 
-    user_id = request.session.get('user_id')
-    user = User.objects.get(id=user_id)  # Logged-in user
-    course = admin_models.Sessions.objects.get(id=course_id)
-    students = admin_models.StudentSession.objects.filter(session=course)
+    try:
+        user_id = request.session.get('user_id')
+        user = User.objects.get(id=user_id)  # Logged-in user
+        course = admin_models.Sessions.objects.get(id=course_id)
+        students = admin_models.StudentSession.objects.filter(session=course)
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except admin_models.Sessions.DoesNotExist:
+        messages.error(request, 'Course not found.')
+        return redirect('tec_select_course')
+    except Exception as e:
+        messages.error(request, f'Error retrieving data: {str(e)}')
+        return redirect('tec_select_course')
 
     if request.method == 'POST':
         date1 = request.POST.get('date')
@@ -55,8 +72,15 @@ def mark_attendance(request, course_id):
 def Profile(request):
     if 'user_id' not in request.session:
         return redirect('home')
-    user_id = request.session.get('user_id')  # Get the logged-in user ID from the session
-    user = User.objects.get(id=user_id)  # Fetch the user object
+    try:
+        user_id = request.session.get('user_id')  # Get the logged-in user ID from the session
+        user = User.objects.get(id=user_id)  # Fetch the user object
+    except User.DoesNotExist:
+        messages.error(request, 'User not found.')
+        return redirect('home')
+    except Exception as e:
+        messages.error(request, f'Error retrieving user data: {str(e)}')
+        return redirect('home')
 
     if request.method == 'POST':
         form = UserForm(request.POST, request.FILES, instance=user)

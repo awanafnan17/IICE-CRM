@@ -1,0 +1,917 @@
+<!doctype html>
+
+<html
+  lang="en"
+  class="light-style layout-menu-fixed layout-compact">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+
+    <title>PDF Name Comparison - Admin Dashboard</title>
+
+    <meta name="description" content="" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../../static/Logos/L1.jpg" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&ampdisplay=swap"
+      rel="stylesheet" />
+
+    <link rel="stylesheet" href="/static/assets/vendor/fonts/remixicon/remixicon.css" />
+
+    <!-- Menu waves for no-customizer fix -->
+    <link rel="stylesheet" href="/static/assets/vendor/libs/node-waves/node-waves.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/static/assets/vendor/css/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/static/assets/vendor/css/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/static/assets/css/demo.css" />
+
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/static/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <link rel="stylesheet" href="/static/assets/vendor/libs/apex-charts/apex-charts.css" />
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/dataTables.bootstrap5.min.css">
+    
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.all.min.js"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        .pdf-dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .comparison-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border-left: 4px solid #6c63ff;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+        
+        .upload-area {
+            border: 2px dashed #6c63ff;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: #5a52d5;
+            background: #f0f0ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #5a52d5;
+            background: #e8e8ff;
+        }
+        
+        .session-selector {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        
+        .session-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .session-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+        
+        .session-item.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            margin-top: 25px;
+        }
+        
+        .result-category {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .result-category.matched {
+            border-left: 4px solid #28a745;
+        }
+        
+        .result-category.unmatched-pdf {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .result-category.unmatched-students {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .name-item {
+            background: white;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .btn-modern {
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .form-control-modern {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control-modern:focus {
+            border-color: #6c63ff;
+            box-shadow: 0 0 0 0.2rem rgba(108, 99, 255, 0.25);
+        }
+        
+        .checkbox-modern {
+            width: 20px;
+            height: 20px;
+            accent-color: #6c63ff;
+        }
+        
+        .progress-modern {
+            height: 8px;
+            border-radius: 10px;
+            background: #e9ecef;
+        }
+        
+        .progress-bar-modern {
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+
+    <!-- Helpers -->
+    <script src="/static/assets/vendor/js/helpers.js"></script>
+    <script src="/static/assets/js/config.js"></script>
+  </head>
+
+  <body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-content-navbar">
+      <div class="layout-container">
+        <!-- Menu -->
+        <aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+          <div class="app-brand demo">
+            <a href="{% url 'home' %}" class="app-brand-link">
+              <span class="app-brand-text demo menu-text fw-semibold ms-2">Iqra Academy</span>
+            </a>
+            <a href="" class="layout-menu-toggle menu-link text-large ms-auto">
+              <i class="menu-toggle-icon d-xl-block align-middle"></i>
+            </a>
+          </div>
+
+          <div class="menu-inner-shadow"></div>
+            
+          <li class="menu-header mt-7">
+            <span class="menu-header-text">Main DashBoard</span>
+          </li>
+          <li class="menu-item">
+            <a href="{% url 'Admin_Dashboard' %}" class="menu-link">
+              <i class="menu-icon tf-icons ri-home-smile-line"></i>
+              <div data-i18n="Basic">Dashboard</div>
+            </a>
+          </li>
+          <ul class="menu-inner py-1">
+            <!-- User Pages -->
+            <li class="menu-item">
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons ri-user-fill"></i>
+                <div data-i18n="Dashboards">User Info</div>
+              </a>
+              <ul class="menu-sub">
+                {% if user.usertype != 2 %}
+                <li class="menu-item">
+                  <a href="{% url 'Faculty' %}" class="menu-link">
+                    <div data-i18n="CRM">Faculty</div>
+                  </a>
+                </li>
+                {% endif %}
+                <li class="menu-item">
+                  <a href="{% url 'Students' %}" class="menu-link">
+                    <div data-i18n="CRM">Students</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{% url 'ExStudents' %}" class="menu-link">
+                    <div data-i18n="CRM">Ex-Students</div>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li class="menu-item">
+              <a href="" class="menu-link menu-toggle">
+                <i class="menu-icon tf-icons ri-book-fill"></i>
+                <div data-i18n="Dashboards">Sessions</div>
+              </a>
+              <ul class="menu-sub">
+                <li class="menu-item">
+                  <a href="{% url 'Sessions' %}" class="menu-link">
+                    <div data-i18n="CRM">Current</div>
+                  </a>
+                </li>
+                <li class="menu-item">
+                  <a href="{% url 'CompletedSessions' %}" class="menu-link">
+                    <div data-i18n="CRM">Completed</div>
+                  </a>
+                </li>
+              </ul>
+            </li>
+            <li class="menu-item">
+              <a href="{% url 'Leads' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-group-line"></i>
+                <div data-i18n="Dashboards">Leads</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="{% url 'select_course' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-user-fill"></i>
+                <div data-i18n="Dashboards">Attendance</div>
+              </a>
+            </li>
+            {% if user.usertype != 2 %}
+            <li class="menu-item">
+              <a href="{% url 'payment' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-wallet-2-fill"></i>
+                <div data-i18n="Dashboards">Payments</div>
+              </a>
+            </li>
+            {% endif %}
+            <li class="menu-item">
+              <a href="{% url 'notification' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-mail-fill"></i>
+                <div data-i18n="Dashboards">Notifications</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="{% url 'EmailService' %}" class="menu-link">
+                <i class="menu-icon tf-icons ri-mail-send-fill"></i>
+                <div data-i18n="Dashboards">Email Service</div>
+              </a>
+            </li>
+          </ul>
+        </aside>
+        <!-- / Menu -->
+
+        <!-- Layout container -->
+        <div class="layout-page">
+          <!-- Navbar -->
+          <nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
+            <!-- Mobile menu toggle button -->
+            <div class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0 d-xl-none">
+              <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
+                <i class="ri-menu-fill ri-24px"></i>
+              </a>
+            </div>
+
+            <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+              <ul class="navbar-nav flex-row align-items-center ms-auto">
+                <!-- User -->
+                <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                  <a class="nav-link dropdown-toggle hide-arrow p-0" href="" data-bs-toggle="dropdown">
+                    <div class="avatar avatar-online">
+                      <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                           alt="{{ user.first_name }} {{ user.last_name }}" 
+                           class="w-px-40 h-auto rounded-circle" />
+                    </div>
+                  </a>
+                  <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
+                    <li>
+                      <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
+                        <div class="d-flex align-items-center">
+                          <div class="flex-shrink-0 me-2">
+                            <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
+                                 alt="{{ user.first_name }} {{ user.last_name }}" 
+                                 class="w-px-40 h-auto rounded-circle" />
+                          </div>
+                          <div class="flex-grow-1">
+                            <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
+                            <small class="text-muted">Admin</small>
+                          </div>
+                        </div>
+                      </a>
+                    </li>
+                    <li><div class="dropdown-divider"></div></li>
+                    <li>
+                      <div class="d-grid px-4 pt-2 pb-1">
+                        <a class="btn btn-danger d-flex" href="{% url 'logout' %}">
+                          <small class="align-middle">Logout</small>
+                          <i class="ri-logout-box-r-line ms-2 ri-16px"></i>
+                        </a>
+                      </div>
+                    </li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </nav>
+          <!-- / Navbar -->
+
+          <!-- Content wrapper -->
+          <div class="content-wrapper">
+            <!-- Content -->
+            <div class="container-xxl flex-grow-1 container-p-y">
+              {% csrf_token %}
+              
+              <!-- Dashboard Header -->
+              <div class="pdf-dashboard-header">
+                <div class="row align-items-center">
+                  <div class="col-md-8">
+                    <h2 class="mb-2">PDF Name Comparison Tool</h2>
+                    <p class="mb-0 opacity-75">Upload a PDF and compare names with selected session students</p>
+                  </div>
+                  <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end gap-2">
+                      <button class="btn btn-light btn-modern" onclick="resetComparison()">
+                        <i class="ri-refresh-line me-2"></i>Reset
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Main Content Row -->
+              <div class="row mb-4">
+                <!-- PDF Upload Section -->
+                <div class="col-lg-6">
+                  <form method="POST" enctype="multipart/form-data" id="pdfComparisonForm">
+                    {% csrf_token %}
+                    <div class="comparison-card">
+                      <h5 class="mb-4">
+                        <i class="ri-file-pdf-line text-danger me-2"></i>
+                        Upload PDF File
+                      </h5>
+                      
+                      <div class="upload-area" id="uploadArea">
+                        <div class="upload-content">
+                          <i class="ri-upload-cloud-2-line" style="font-size: 3rem; color: #6c63ff; margin-bottom: 15px;"></i>
+                          <h6 class="mb-2">Drop your PDF file here or click to browse</h6>
+                          <p class="text-muted mb-3">Supported format: PDF (Max size: 10MB)</p>
+                          <input type="file" name="pdf_file" id="pdfFile" accept=".pdf" class="d-none">
+                          <button type="button" class="btn btn-primary btn-modern" onclick="document.getElementById('pdfFile').click()">
+                            <i class="ri-folder-open-line me-2"></i>Choose File
+                          </button>
+                        </div>
+                        <div class="upload-progress d-none" id="uploadProgress">
+                          <div class="progress progress-modern mb-2">
+                            <div class="progress-bar progress-bar-modern" style="width: 0%"></div>
+                          </div>
+                          <small class="text-muted">Uploading...</small>
+                        </div>
+                      </div>
+                      
+                      <div class="selected-file d-none" id="selectedFile">
+                        <div class="d-flex align-items-center justify-content-between p-3 bg-light rounded mt-3">
+                          <div class="d-flex align-items-center">
+                            <i class="ri-file-pdf-line text-danger me-2"></i>
+                            <span id="fileName"></span>
+                          </div>
+                          <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFile()">
+                            <i class="ri-close-line"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </form>
+                </div>
+                
+                <!-- Session Selection Section -->
+                <div class="col-lg-6">
+                  <div class="session-selector">
+                    <h5 class="mb-4">
+                      <i class="ri-list-check-2 text-success me-2"></i>
+                      Select Sessions to Compare
+                    </h5>
+                    
+                    <div class="mb-3">
+                      <h6 class="mb-2">Current Sessions</h6>
+                      {% for session in current_sessions %}
+                      <div class="session-item" data-session-id="{{ session.id }}" data-session-type="current">
+                        <div class="d-flex align-items-center">
+                          <input type="checkbox" name="selected_sessions" value="{{ session.id }}" class="checkbox-modern me-3">
+                          <div>
+                            <h6 class="mb-1">{{ session.session_name }}</h6>
+                            <small class="text-muted">{{ session.student_count }} students</small>
+                          </div>
+                        </div>
+                      </div>
+                      {% empty %}
+                      <p class="text-muted">No current sessions available</p>
+                      {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                      <h6 class="mb-2">Completed Sessions</h6>
+                      {% for session in completed_sessions %}
+                      <div class="session-item" data-session-id="{{ session.id }}" data-session-type="completed">
+                        <div class="d-flex align-items-center">
+                          <input type="checkbox" name="selected_sessions" value="{{ session.id }}" class="checkbox-modern me-3">
+                          <div>
+                            <h6 class="mb-1">{{ session.session_name }}</h6>
+                            <small class="text-muted">{{ session.student_count }} students</small>
+                          </div>
+                        </div>
+                      </div>
+                      {% empty %}
+                      <p class="text-muted">No completed sessions available</p>
+                      {% endfor %}
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                      <button type="button" class="btn btn-primary btn-modern px-5" id="compareBtn" onclick="performComparison()">
+                        <i class="ri-search-line me-2"></i>
+                        Compare Names
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Results Section -->
+              <div class="results-section d-none" id="resultsSection">
+                <h5 class="mb-4">
+                  <i class="ri-bar-chart-line text-primary me-2"></i>
+                  Comparison Results
+                </h5>
+                
+                <!-- Students Found in PDF -->
+                <div class="result-category matched mb-4">
+                  <h6 class="text-success mb-3">
+                    <i class="ri-check-double-line me-2"></i>
+                    Students Found in PDF (<span id="matchedCount">0</span>)
+                  </h6>
+                  <div id="matchedNames"></div>
+                </div>
+                
+                <!-- Students Not Found in PDF -->
+                <div class="result-category unmatched-students mb-4">
+                  <h6 class="text-danger mb-3">
+                    <i class="ri-user-unfollow-line me-2"></i>
+                    Students Not Found in PDF (<span id="studentsOnlyCount">0</span>)
+                  </h6>
+                  <div id="studentsOnlyNames"></div>
+                </div>
+                
+                <div class="text-center mt-4">
+                  <button class="btn btn-secondary btn-modern" onclick="printResults()">
+                    <i class="ri-printer-line me-2"></i>
+                    Print Results
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- / Content -->
+
+            <!-- Footer -->
+            <footer class="content-footer footer bg-footer-theme">
+              <div class="container-xxl">
+                <div class="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
+                  <div class="text-body mb-2 mb-md-0">
+                    CopyRight © 2024 IQRA ACADEMY
+                  </div>
+                </div>
+              </div>
+            </footer>
+            <!-- / Footer -->
+
+            <div class="content-backdrop fade"></div>
+          </div>
+          <!-- Content wrapper -->
+        </div>
+        <!-- / Layout page -->
+      </div>
+      <!-- Overlay -->
+      <div class="layout-overlay layout-menu-toggle"></div>
+    </div>
+    <!-- / Layout wrapper -->
+
+    <!-- Core JS -->
+    <script src="/static/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/static/assets/vendor/js/bootstrap.js"></script>
+    <script src="/static/assets/vendor/libs/node-waves/node-waves.js"></script>
+    <script src="/static/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="/static/assets/vendor/js/menu.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // File upload handling
+            $('#pdfFile').on('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    if (file.type !== 'application/pdf') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Invalid File Type',
+                            text: 'Please select a PDF file.',
+                            confirmButtonColor: '#6c63ff'
+                        });
+                        this.value = '';
+                        return;
+                    }
+                    
+                    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'File Too Large',
+                            text: 'Please select a file smaller than 10MB.',
+                            confirmButtonColor: '#6c63ff'
+                        });
+                        this.value = '';
+                        return;
+                    }
+                    
+                    $('#fileName').text(file.name);
+                    $('#selectedFile').removeClass('d-none');
+                    $('.upload-content').addClass('d-none');
+                }
+            });
+            
+            // Drag and drop functionality
+            const uploadArea = $('#uploadArea');
+            
+            uploadArea.on('dragover', function(e) {
+                e.preventDefault();
+                $(this).addClass('dragover');
+            });
+            
+            uploadArea.on('dragleave', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+            });
+            
+            uploadArea.on('drop', function(e) {
+                e.preventDefault();
+                $(this).removeClass('dragover');
+                
+                const files = e.originalEvent.dataTransfer.files;
+                if (files.length > 0) {
+                    $('#pdfFile')[0].files = files;
+                    $('#pdfFile').trigger('change');
+                }
+            });
+            
+            // Session selection handling
+            $('.session-item').on('click', function() {
+                const checkbox = $(this).find('input[type="checkbox"]');
+                checkbox.prop('checked', !checkbox.prop('checked'));
+                $(this).toggleClass('selected', checkbox.prop('checked'));
+            });
+        });
+        
+        function removeFile() {
+            $('#pdfFile').val('');
+            $('#selectedFile').addClass('d-none');
+            $('.upload-content').removeClass('d-none');
+        }
+        
+        function resetComparison() {
+            $('#pdfComparisonForm')[0].reset();
+            $('.session-item').removeClass('selected');
+            $('input[name="selected_sessions"]').prop('checked', false);
+            $('#resultsSection').addClass('d-none');
+            currentResults = null; // Clear stored results
+            removeFile();
+        }
+        
+        function performComparison() {
+            const pdfFile = $('#pdfFile')[0].files[0];
+            const selectedSessions = $('input[name="selected_sessions"]:checked').map(function() {
+                return this.value;
+            }).get();
+            
+            if (!pdfFile) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No PDF Selected',
+                    text: 'Please select a PDF file to compare.',
+                    confirmButtonColor: '#6c63ff'
+                });
+                return;
+            }
+            
+            if (selectedSessions.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Sessions Selected',
+                    text: 'Please select at least one session to compare.',
+                    confirmButtonColor: '#6c63ff'
+                });
+                return;
+            }
+            
+            // Show loading state
+            const compareBtn = $('#compareBtn');
+            const originalText = compareBtn.html();
+            compareBtn.html('<i class="ri-loader-4-line me-2 spinner-border spinner-border-sm"></i>Processing...');
+            compareBtn.prop('disabled', true);
+            
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('pdf_file', pdfFile);
+            formData.append('selected_sessions', JSON.stringify(selectedSessions));
+            formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+            
+            $.ajax({
+                type: 'POST',
+                url: '{% url "PDFNameComparison" %}',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        displayResults(response.results);
+                        $('#resultsSection').removeClass('d-none');
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Comparison Complete!',
+                            text: 'PDF names have been successfully compared with session students.',
+                            confirmButtonColor: '#6c63ff'
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Comparison Failed',
+                            text: response.error || 'An error occurred during comparison.',
+                            confirmButtonColor: '#6c63ff'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Processing Error',
+                        text: 'There was an error processing your request. Please try again.',
+                        confirmButtonColor: '#6c63ff'
+                    });
+                },
+                complete: function() {
+                    compareBtn.html(originalText);
+                    compareBtn.prop('disabled', false);
+                }
+            });
+        }
+        
+        function displayResults(results) {
+            // Store results globally for export functionality
+            currentResults = results;
+            
+            // Display matched students
+            $('#matchedCount').text(results.matched.length);
+            if (results.matched.length > 0) {
+                const matchedHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-success">
+                                <tr>
+                                    <th style="background-color: #ffff99; color: #000;">Student Name <i class="ri-focus-3-line" title="Comparison Field"></i></th>
+                                    <th>Roll No</th>
+                                    <th>Father Name</th>
+                                    <th>Mobile No</th>
+                                    <th>Email</th>
+                                    <th>Session</th>
+                                    <th>Session Period</th>
+                                    <th>Registration Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${results.matched.map(student => `
+                                    <tr>
+                                        <td style="background-color: #ffffcc;"><strong>${student.student_name || 'N/A'}</strong></td>
+                                        <td><span class="badge bg-primary">${student.rollno || 'N/A'}</span></td>
+                                        <td>${student.father_name || 'N/A'}</td>
+                                        <td><a href="tel:${student.mobile_no || ''}" class="text-decoration-none">${student.mobile_no || 'N/A'}</a></td>
+                                        <td><a href="mailto:${student.email || ''}" class="text-decoration-none">${student.email || 'N/A'}</a></td>
+                                        <td><span class="badge bg-info">${student.session_name || 'N/A'} (${student.session_type || 'N/A'})</span></td>
+                                        <td><small class="text-muted">${student.start_date || 'N/A'} to ${student.end_date || 'N/A'}</small></td>
+                                        <td><small class="text-muted">${student.registration_date || 'N/A'}</small></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#matchedNames').html(matchedHtml);
+            } else {
+                $('#matchedNames').html('<div class="alert alert-info"><i class="ri-information-line me-2"></i>No students found in PDF</div>');
+            }
+            
+            // Display students not found in PDF
+            $('#studentsOnlyCount').text(results.students_only.length);
+            if (results.students_only.length > 0) {
+                const studentsOnlyHtml = `
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-danger">
+                                <tr>
+                                    <th style="background-color: #ffff99; color: #000;">Student Name <i class="ri-focus-3-line" title="Comparison Field"></i></th>
+                                    <th>Roll No</th>
+                                    <th>Father Name</th>
+                                    <th>Mobile No</th>
+                                    <th>Email</th>
+                                    <th>Session</th>
+                                    <th>Session Period</th>
+                                    <th>Registration Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${results.students_only.map(student => `
+                                    <tr>
+                                        <td style="background-color: #ffffcc;"><strong>${student.student_name || 'N/A'}</strong></td>
+                                        <td><span class="badge bg-primary">${student.rollno || 'N/A'}</span></td>
+                                        <td>${student.father_name || 'N/A'}</td>
+                                        <td><a href="tel:${student.mobile_no || ''}" class="text-decoration-none">${student.mobile_no || 'N/A'}</a></td>
+                                        <td><a href="mailto:${student.email || ''}" class="text-decoration-none">${student.email || 'N/A'}</a></td>
+                                        <td><span class="badge bg-info">${student.session_name || 'N/A'} (${student.session_type || 'N/A'})</span></td>
+                                        <td><small class="text-muted">${student.start_date || 'N/A'} to ${student.end_date || 'N/A'}</small></td>
+                                        <td><small class="text-muted">${student.registration_date || 'N/A'}</small></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                $('#studentsOnlyNames').html(studentsOnlyHtml);
+            } else {
+                $('#studentsOnlyNames').html('<div class="alert alert-success"><i class="ri-check-line me-2"></i>All students found in PDF</div>');
+            }
+            
+            // Add note about comparison field
+            const noteHtml = `
+                <div class="alert alert-info mt-3">
+                    <i class="ri-information-line me-2"></i>
+                    <strong>Note:</strong> The highlighted <span style="background-color: #ffff99; padding: 2px 4px; border-radius: 3px;">Student Name</span> column indicates the field used for PDF comparison.
+                </div>
+            `;
+            $('#studentsOnlyNames').after(noteHtml);
+        }
+        
+        let currentResults = null; // Store current comparison results
+        
+        function exportResults(format) {
+            if (!currentResults) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Results to Export',
+                    text: 'Please perform a comparison first to generate results.',
+                    confirmButtonColor: '#6c63ff'
+                });
+                return;
+            }
+            
+            // Show loading state
+            const exportBtn = event.target;
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="ri-loader-4-line me-2 spinner-border spinner-border-sm"></i>Generating PDF...';
+            exportBtn.disabled = true;
+            
+            // Prepare data for export - always use 'word' format internally but convert to PDF
+            const exportData = {
+                format: 'word_to_pdf',
+                results: currentResults
+            };
+            
+            // Send AJAX request to export endpoint
+            fetch('{% url "export_pdf_comparison_results" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                },
+                body: JSON.stringify(exportData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    // Get filename from response headers
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = `PDF_Comparison_Results_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.pdf`;
+                    if (contentDisposition) {
+                        const filenameMatch = contentDisposition.match(/filename="(.+)"/); 
+                        if (filenameMatch) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    
+                    // Download the file
+                    return response.blob().then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Export Successful!',
+                            text: 'Results have been exported to PDF format.',
+                            confirmButtonColor: '#6c63ff'
+                        });
+                    });
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Export failed');
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Export error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Export Failed',
+                    text: error.message || 'There was an error exporting the results.',
+                    confirmButtonColor: '#6c63ff'
+                });
+            })
+            .finally(() => {
+                // Restore button state
+                exportBtn.innerHTML = originalText;
+                exportBtn.disabled = false;
+            });
+        }
+        
+        function printResults() {
+            // Implementation for printing results
+            window.print();
+        }
+    </script>
+    
+    <!-- Core JS -->
+    <!-- build:js assets/vendor/js/core.js -->
+    <script src="/static/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="/static/assets/vendor/libs/popper/popper.js"></script>
+    <script src="/static/assets/vendor/js/bootstrap.js"></script>
+    <script src="/static/assets/vendor/libs/node-waves/node-waves.js"></script>
+    <script src="/static/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="/static/assets/vendor/js/menu.js"></script>
+    <!-- endbuild -->
+
+    <!-- Vendors JS -->
+    <script src="/static/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+
+    <!-- Main JS -->
+    <script src="/static/assets/js/main.js"></script>
+
+    <!-- Page JS -->
+    <script src="/static/assets/js/dashboards-analytics.js"></script>
+  </body>
+</html>

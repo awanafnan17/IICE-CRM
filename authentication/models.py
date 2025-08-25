@@ -7,6 +7,16 @@ def profile_photo_path(instance, filename):
     filename = f"{slugify(instance.first_name)}_{slugify(instance.last_name)}_{slugify(instance.email)}.{extension}"
     return filename
 
+def cnic_photo_path(instance, filename):
+    extension = filename.split('.')[-1]
+    filename = f"{slugify(instance.first_name)}_{slugify(instance.last_name)}_cnic.{extension}"
+    return filename
+
+def degree_photo_path(instance, filename):
+    extension = filename.split('.')[-1]
+    filename = f"{slugify(instance.first_name)}_{slugify(instance.last_name)}_degree.{extension}"
+    return filename
+
 
 class User(models.Model):
     USER_TYPE_CHOICES = [
@@ -31,6 +41,8 @@ class User(models.Model):
     cnic = models.CharField(max_length=15, blank=True, null=True)  # New field for mobile number
     address = models.TextField(blank=True, null=True)  # New field for address
     joining_date = models.DateField(null=True, blank=True)
+    cnic_photo = models.ImageField(upload_to=cnic_photo_path, blank=True, null=True)
+    degree_photo = models.ImageField(upload_to=degree_photo_path, blank=True, null=True)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"

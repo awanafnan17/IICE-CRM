@@ -366,13 +366,6 @@
 {#                <div class="badge bg-danger rounded-pill ms-auto">5</div>#}
               </a>
                 <ul class="menu-sub open">
-                {% if user.usertype != 2 %}
-                <li class="menu-item">
-                  <a href="{% url 'Faculty' %}" class="menu-link">
-                    <div data-i18n="CRM">Faculty</div>
-                  </a>
-                </li>
-                {% endif %}
                 <li class="menu-item">
                   <a href="{% url 'Students' %}" class="menu-link">
                     <div data-i18n="CRM">Students</div>
@@ -475,17 +468,17 @@
                         <!-- Check if the user has a profile photo, if not, show a default image -->
                         <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                     </div>
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                     <li>
-                      <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                      <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                         <div class="d-flex align-items-center">
                           <div class="flex-shrink-0 me-2">
                             <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
                              alt="{{ user.first_name }} {{ user.last_name }}" 
-                             class="w-px-40 h-auto rounded-circle" />
+                             class="w-px-40 h-px-40 rounded-circle" style="object-fit: cover;" />
                           </div>
                           <div class="flex-grow-1">
                             <h6 class="mb-0 small">{{ user.first_name }} {{ user.last_name }}</h6>
@@ -1332,13 +1325,48 @@
                 }
             });
             
-            // Ensure the clicked action is captured and included in POST
-            $("button[name='freeze_student'], button[name='unfreeze_student'], button[name='save_changes']").on('click', function() {
+            // Handle freeze button click to show modal
+            $("button[name='freeze_student']").on('click', function(e) {
+                e.preventDefault(); // Prevent form submission
+                $('#freezeReasonModal').modal('show');
+            });
+            
+            // Handle freeze confirmation from modal
+            $('#confirmFreeze').on('click', function() {
+                const selectedReason = $('input[name="freeze_reason"]:checked').val();
+                
+                // Add hidden inputs for freeze action
+                $("#clicked_action").remove(); // avoid duplicates
+                $("#freeze_reason_input").remove(); // avoid duplicates
+                
+                const freezeAction = $('<input>', {
+                    type: 'hidden',
+                    id: 'clicked_action',
+                    name: 'freeze_student',
+                    value: '1'
+                });
+                
+                const freezeReason = $('<input>', {
+                    type: 'hidden',
+                    id: 'freeze_reason_input',
+                    name: 'freeze_reason',
+                    value: selectedReason
+                });
+                
+                $("#formAccountSettings").append(freezeAction).append(freezeReason);
+                
+                // Close modal and submit form
+                $('#freezeReasonModal').modal('hide');
+                $("#formAccountSettings")[0].submit();
+            });
+            
+            // Ensure the clicked action is captured and included in POST for other buttons
+            $("button[name='unfreeze_student'], button[name='save_changes']").on('click', function() {
                 $("#clicked_action").remove(); // avoid duplicates
                 const hidden = $('<input>', {
                     type: 'hidden',
                     id: 'clicked_action',
-                    name: this.name,          // e.g., 'freeze_student' | 'unfreeze_student' | 'save_changes'
+                    name: this.name,          // e.g., 'unfreeze_student' | 'save_changes'
                     value: this.value || '1'
                 });
                 $("#formAccountSettings").append(hidden);
@@ -1585,6 +1613,41 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="button" class="btn btn-primary" id="confirmEnrollment">Confirm Enrollment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Freeze Reason Modal -->
+    <div class="modal fade" id="freezeReasonModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Freeze Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-3">Please select the reason for freezing this student:</p>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="freeze_reason" id="freeze_reason_freeze" value="Freeze" checked>
+                        <label class="form-check-label" for="freeze_reason_freeze">
+                            <i class="ri-pause-circle-line me-2 text-warning"></i>Freeze
+                            <small class="d-block text-muted">Temporarily suspend the student</small>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="freeze_reason" id="freeze_reason_left" value="Left">
+                        <label class="form-check-label" for="freeze_reason_left">
+                            <i class="ri-logout-box-line me-2 text-info"></i>Left
+                            <small class="d-block text-muted">Student has left the institution</small>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="confirmFreeze">
+                        <i class="ri-pause-circle-line me-1"></i>Confirm Freeze
+                    </button>
                 </div>
             </div>
         </div>

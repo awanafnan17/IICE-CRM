@@ -24,6 +24,7 @@ class Student(models.Model):
     ]
     INACTIVE_REASON_CHOICES = [
         ('Freeze', 'Freeze'),
+        ('Left', 'Left'),
         ('Expelled', 'Expelled'),
         ('', 'None'),
     ]
@@ -83,20 +84,20 @@ class Student(models.Model):
 
     @property
     def total_paid(self):
-        """Calculate total amount paid by this student from Payments table"""
+        """Calculate total amount paid by this student from Payments table for active sessions only"""
         return sum(
             payment.amount or 0 
-            for session in self.student_sessions.all() 
+            for session in self.student_sessions.filter(status='Active') 
             for payment in session.student_payments.all()
         )
 
     @property
     def total_fee(self):
-        """Calculate total fee for all sessions (registration fee charged once)"""
-        # Consider all sessions, not just active ones, to account for outstanding payments
-        sessions_qs = self.student_sessions.all()
+        """Calculate total fee for active sessions only (registration fee charged once)"""
+        # Only consider active sessions to prevent charging for inactive sessions
+        sessions_qs = self.student_sessions.filter(status='Active')
         
-        # Sum of (fee - discount) across all sessions
+        # Sum of (fee - discount) across active sessions only
         base_total = sum((s.fee or 0) - (s.discount or 0) for s in sessions_qs)
         
         # Determine primary session: earliest registration_date, fallback to lowest id

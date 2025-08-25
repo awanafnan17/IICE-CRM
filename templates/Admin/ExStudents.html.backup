@@ -319,7 +319,7 @@
                   </a>
                   <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
                     <li>
-                      <a class="dropdown-item" href="{% url 'Admin_Profile' %}">
+                      <a class="dropdown-item" href="{% if user.usertype == 2 %}{% url 'Moderator_Profile' %}{% else %}{% url 'Admin_Profile' %}{% endif %}">
                         <div class="d-flex align-items-center">
                           <div class="flex-shrink-0 me-2">
                             <img src="{% if user.profile_photo %}{{ user.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" 
@@ -381,7 +381,7 @@
                                         <td>
                                             <a href="{% url 'StudentView' student.id %}" class="d-flex align-items-center" style="text-decoration: none; color: inherit;">
                                                 <div class="avatar avatar-sm me-4">
-                                                    <img src="{{ student.profile_photo.url }}" alt="Avatar" class="rounded-circle" />
+                                                    <img src="{% if student.profile_photo %}{{ student.profile_photo.url }}{% else %}/static/assets/img/avatars/1.png{% endif %}" alt="Avatar" class="rounded-circle" />
                                                 </div>
                                                 <div>
                                                     <h6 class="mb-0 text-truncate">{{ student.student_name }}</h6>

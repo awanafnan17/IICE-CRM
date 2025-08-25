@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from decouple import config
 import dj_database_url
+from .email_encryption import EmailPasswordEncryption
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -48,7 +49,13 @@ EMAIL_PORT = 587  # TLS port (more reliable than SSL)
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
 EMAIL_HOST_USER = 'indrivecopy@gmail.com'  # Your Gmail address
-EMAIL_HOST_PASSWORD = 'tlny pjdq qwdn gaoc'  # Replace with Gmail App Password
+# Store encrypted password in environment variable EMAIL_HOST_PASSWORD_ENCRYPTED
+# For plain text password, use EMAIL_HOST_PASSWORD (for backward compatibility)
+encrypted_password = config('EMAIL_HOST_PASSWORD_ENCRYPTED', default=None)
+if encrypted_password:
+    EMAIL_HOST_PASSWORD = EmailPasswordEncryption.decrypt_password(encrypted_password)
+else:
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='tlny pjdq qwdn gaoc')  # Fallback to plain text
 DEFAULT_FROM_EMAIL = 'indrivecopy@gmail.com'
 EMAIL_TIMEOUT = 30  # Add timeout setting
 
